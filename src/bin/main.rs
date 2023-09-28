@@ -5,14 +5,15 @@ use std::{
     thread,
     time::Duration,
 };
+use actix_web::{get,web,App,HttpServer,Responder};
 
 use hello::ThreadPool;
 
-fn main() {
+fn main2() {
     println!("Hello, world!");
     let listener = TcpListener::bind("127.0.0.1:7878").unwrap();
     let pool = ThreadPool::new(4);
-    for stream in listener.incoming().take(2) {
+    for stream in listener.incoming() {
         let stream = stream.unwrap();
         println!("Connection established!");
         pool.execute(move || handle_connection(stream));
@@ -38,4 +39,19 @@ fn handle_connection(mut stream: TcpStream) {
     let response = format!("{}{}", status_line, contents);
     stream.write(response.as_bytes()).unwrap();
     stream.flush().unwrap();
+}
+
+#[get("/hello/{name}")]
+async fn greet(name: web::Path<String>) -> impl Responder{
+    format!("Hello {name}!")
+}
+
+#[actix_web::main]
+async fn main()->std::io::Result<()>{
+    HttpServer::new(||{
+        App::new().service(greet)
+    })
+    .bind(("127.0.0.1",7878))?
+    .run()
+    .await
 }
